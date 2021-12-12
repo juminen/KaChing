@@ -1,0 +1,140 @@
+﻿@using KaChing.Model
+@using System.Threading.Tasks
+@using System.ComponentModel.DataAnnotations;
+@inject AnalysisService AnalysisService
+
+<h1>Market data analyst</h1>
+<p>
+	Market data analyst analyses crypto coin markets. Analysis result contains following sub-analysis:
+<ul>
+	<li>Longest downward trend length</li>
+	<li>Highest trading volume and day</li>
+	<li>Time machine: finds best days to buy and sell for maximum profits (if there are any)</li>
+</ul>
+Select date range and hit the button to run analysis. <br>
+<small>Note: At the moment, analysis can be done only to bitcoin using euro as currency.</small>
+</p>
+
+<EditForm Model=@settings OnValidSubmit="@SubmitForm">
+	<fieldset>
+		<legend>Settings</legend>
+		<div class="row mb-3">
+			<label for="selectedCoin" class="col-sm-2 col-form-label">Selected coin</label>
+			<div class="col-sm-auto">
+				<select id="selectedCoin" @bind="@settings.SelectedCoin" class="form-select">
+					@if (settings.Coins != null)
+					{
+						@foreach (var item in settings.Coins)
+						{
+							<option>@item</option>
+						}
+					}
+				</select>
+			</div>
+		</div>
+		<div class="row mb-3">
+			<label for="selectedCurrency" class="col-sm-2 col-form-label">Selected currency</label>
+			<div class="col-sm-auto">
+				@* <div class="col-sm-10"></div> *@
+				<select id="selectedCurrency" @bind="@settings.SelectedCurrency" class="form-select">
+					@if (settings.Currencies != null)
+					{
+						@foreach (var item in settings.Currencies)
+						{
+							<option>@item</option>
+						}
+					}
+				</select>
+			</div>
+		</div>
+		<div class="row mb-3">
+			<label for="fromDate" class="col-sm-2 col-form-label">From</label>
+			<div class="col-sm-auto">
+				<InputDate id="fromDate" class="form-control" DisplayName="From Date" @bind-Value="settings.FromDate" />
+			</div>
+		</div>
+		<div class="row mb-3">
+			<label for="toDate" class="col-sm-2 form-label">To</label>
+			<div class="col-sm-auto">
+				<InputDate id="toDate" class="form-control" DisplayName="To Date" max="@maxDate"
+					@bind-Value="settings.ToDate" />
+			</div>
+		</div>
+	</fieldset>
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+	<button class="btn btn-primary" disabled="@runAnalysisIsDisabled">Run analysis</button>
+</EditForm>
+@if (results != null)
+{
+	<br>
+	<AnalysisResult Results="results" />
+}
+
+@code {
+
+	public class Settings
+	{
+		[Required]
+		public DateTime FromDate { get; set; }
+		[Required]
+		public DateTime ToDate { get; set; }
+		public IList<string> Coins { get; set; } = new List<string>();
+		public IList<string> Currencies { get; set; } = new List<string>();
+		[Required]
+		public string SelectedCoin { get; set; }= string.Empty;
+		[Required]
+		public string SelectedCurrency { get; set; } = string.Empty;
+	}
+	private bool runAnalysisIsDisabled = false;
+	private DateTime maxDate = DateTime.Now;
+	private IMarketDataAnalysisResults results;
+	private Settings settings = new()
+	{
+		ToDate = DateTime.Today,
+		FromDate = DateTime.Today - TimeSpan.FromDays(1),
+	};
+
+	protected override async Task OnInitializedAsync()
+	{
+		var coins = await AnalysisService.ListCoinsAsync();
+		var currencies = await AnalysisService.ListCurrenciesAsync();
+
+		if (coins.Count > 0)
+		{
+			foreach (var item in coins)
+			{
+				settings.Coins.Add(item);
+			}
+			settings.SelectedCoin = coins[0];
+		}
+		else
+		{
+			settings.Coins.Add("<No coins available>");
+			runAnalysisIsDisabled = true;
+		}
+
+		if (currencies.Count > 0)
+		{
+			foreach (var item in currencies)
+			{
+				settings.Currencies.Add(item);
+			}
+			settings.SelectedCurrency = currencies[0];
+		}
+		else
+		{
+			settings.Currencies.Add("<No currencies available>");
+			runAnalysisIsDisabled = true;
+		}
+	}
+
+	private async Task SubmitForm()
+	{
+		runAnalysisIsDisabled = true;
+		results = null;
+		results = await AnalysisService.AnalyseMarkets(settings.FromDate, settings.ToDate,
+		settings.SelectedCoin, settings.SelectedCurrency);
+		runAnalysisIsDisabled = false;
+	}
+}

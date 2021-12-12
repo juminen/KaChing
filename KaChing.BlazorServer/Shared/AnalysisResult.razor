@@ -1,0 +1,45 @@
+﻿@using KaChing.Model
+@using Microsoft.AspNetCore.Components;
+@using System
+
+@if (!Results.AnalysisSuccesfull)
+{
+	<div class="validation-message">
+		<h3>Analysis results</h3>
+		<p>@Results.Message</p>
+	</div>
+}
+else
+{
+	<h3 style="color: green;">Analysis results</h3>
+	<h4>Longest downward trend length</h4>
+	<p>Longest downward trend is <b>@Results.LongestDownwardTrendLength</b> day(s).</p>
+
+	<h4>Highest trading volume</h4>
+	@if (Results.HighestTradingVolume.AnalysisSuccesfull)
+	{
+		<p>Highest trading volume was <b>@Math.Round(Results.HighestTradingVolume.Volume, 2) @Results.HighestTradingVolume.Currency</b>
+			on <b>@Results.HighestTradingVolume.Date.ToString(dateFormat)</b>.</p>
+	}
+	else
+	{
+		<p>@Results.HighestTradingVolume.Message</p>
+	}
+
+	<h4>Time machine</h4>
+	@if (Results.BestDaysToBuyAndSell.AnalysisSuccesfull)
+	{
+		<p>For maximum profit, best day to buy is <b>@Results.BestDaysToBuyAndSell.Buy.ToString(dateFormat)</b>
+			and best day to sell is <b>@Results.BestDaysToBuyAndSell.Sell.ToString(dateFormat)</b>.</p>
+	}
+	else
+	{
+		<p>@Results.BestDaysToBuyAndSell.Message</p>
+	}
+}
+
+@code {
+	[Parameter]
+	public IMarketDataAnalysisResults Results { get; set; }
+	const string dateFormat = "dd.MM.yyyy";
+}
